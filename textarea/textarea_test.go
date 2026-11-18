@@ -2881,3 +2881,52 @@ func TestSelectionRangeOrdering(t *testing.T) {
 		t.Errorf("Expected selection %q, got %q", "world", sel)
 	}
 }
+
+// TestDeleteWordLeftKeepsTheSpaceBefore pins deleting the word left of the
+// cursor: the spaces just before the cursor and the word go, and the space
+// before the word stays, at the start of the line too.
+func TestDeleteWordLeftKeepsTheSpaceBefore(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		col   int
+		want  string
+		at    int
+	}{
+		{" a", 2, " ", 1},
+		{"x a", 3, "x ", 2},
+		{"x a  ", 5, "x ", 2},
+		{"  ", 2, "", 0},
+		{"ab", 1, "b", 0},
+	} {
+		m := New()
+		m.SetValue(tc.value)
+		m.SetCursorColumn(tc.col)
+		m.deleteWordLeft()
+		if m.Value() != tc.want || m.Column() != tc.at {
+			t.Errorf("delete word left on %q at %d: %q at %d; want %q at %d",
+				tc.value, tc.col, m.Value(), m.Column(), tc.want, tc.at)
+		}
+	}
+}
+
+func TestDeleteWordLeftRemovesOrdinaryWord(t *testing.T) {
+	t.Parallel()
+	m := New()
+	m.SetValue("one two")
+	m.SetCursorColumn(7)
+	m.deleteWordLeft()
+	if m.Value() != "one " {
+		t.Fatalf("value=%q", m.Value())
+	}
+}
+
+func TestDeleteWordLeftKeepsSuffix(t *testing.T) {
+	t.Parallel()
+	m := New()
+	m.SetValue("hello world")
+	m.SetCursorColumn(5)
+	m.deleteWordLeft()
+	if m.Value() != " world" {
+		t.Fatalf("value=%q", m.Value())
+	}
+}

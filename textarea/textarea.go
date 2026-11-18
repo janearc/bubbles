@@ -903,37 +903,21 @@ func (m *Model) deleteWordLeft() {
 		return
 	}
 
-	// Linter note: it's critical that we acquire the initial cursor position
-	// here prior to altering it via SetCursor() below. As such, moving this
-	// call into the corresponding if clause does not apply here.
-	oldCol := m.col
-
-	m.SetCursorColumn(m.col - 1)
-	for unicode.IsSpace(m.value[m.row][m.col]) {
-		if m.col <= 0 {
-			break
-		}
-		// ignore series of whitespace before cursor
-		m.SetCursorColumn(m.col - 1)
+	// Skip the spaces just before the cursor, then the word, and keep the
+	// space before the word. Stepping by index, not by the cursor, keeps a
+	// space at the very start: " a" loses the "a" alone.
+	line := m.value[m.row]
+	end := min(m.col, len(line))
+	start := end
+	for start > 0 && unicode.IsSpace(line[start-1]) {
+		start--
+	}
+	for start > 0 && !unicode.IsSpace(line[start-1]) {
+		start--
 	}
 
-	for m.col > 0 {
-		if !unicode.IsSpace(m.value[m.row][m.col]) {
-			m.SetCursorColumn(m.col - 1)
-		} else {
-			if m.col > 0 {
-				// keep the previous space
-				m.SetCursorColumn(m.col + 1)
-			}
-			break
-		}
-	}
-
-	if oldCol > len(m.value[m.row]) {
-		m.value[m.row] = m.value[m.row][:m.col]
-	} else {
-		m.value[m.row] = append(m.value[m.row][:m.col], m.value[m.row][oldCol:]...)
-	}
+	m.value[m.row] = append(line[:start], line[end:]...)
+	m.SetCursorColumn(start)
 }
 
 // deleteWordRight deletes the word right to the cursor.

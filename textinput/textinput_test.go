@@ -118,3 +118,43 @@ func sendString(m Model, str string) Model {
 
 	return m
 }
+
+func TestDeleteWordBackwardKeepsLeadingSpace(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		value  string
+		at     int
+		want   string
+		cursor int
+	}{{" a", 2, " ", 1}, {"x a", 3, "x ", 2}, {"x a  ", 5, "x ", 2}} {
+		m := New()
+		m.SetValue(tt.value)
+		m.SetCursor(tt.at)
+		m.deleteWordBackward()
+		if m.Value() != tt.want || m.Position() != tt.cursor {
+			t.Fatalf("delete %q: %q at %d, want %q at %d", tt.value, m.Value(), m.Position(), tt.want, tt.cursor)
+		}
+	}
+}
+
+func TestDeleteWordBackwardRemovesOrdinaryWord(t *testing.T) {
+	t.Parallel()
+	m := New()
+	m.SetValue("one two")
+	m.CursorEnd()
+	m.deleteWordBackward()
+	if m.Value() != "one " {
+		t.Fatalf("value=%q", m.Value())
+	}
+}
+
+func TestDeleteWordBackwardKeepsSuffix(t *testing.T) {
+	t.Parallel()
+	m := New()
+	m.SetValue("hello world")
+	m.SetCursor(5)
+	m.deleteWordBackward()
+	if m.Value() != " world" {
+		t.Fatalf("value=%q", m.Value())
+	}
+}

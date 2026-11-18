@@ -423,38 +423,20 @@ func (m *Model) deleteWordBackward() {
 		return
 	}
 
-	// Linter note: it's critical that we acquire the initial cursor position
-	// here prior to altering it via SetCursor() below. As such, moving this
-	// call into the corresponding if clause does not apply here.
-	oldPos := m.pos
-
-	m.SetCursor(m.pos - 1)
-	for unicode.IsSpace(m.value[m.pos]) {
-		if m.pos <= 0 {
-			break
-		}
-		// ignore series of whitespace before cursor
-		m.SetCursor(m.pos - 1)
+	// Skip the spaces just before the cursor, then the word, and keep the
+	// space before the word. Stepping by index, not by the cursor, keeps a
+	// space at the very start: " a" loses the "a" alone.
+	start := m.pos
+	for start > 0 && unicode.IsSpace(m.value[start-1]) {
+		start--
+	}
+	for start > 0 && !unicode.IsSpace(m.value[start-1]) {
+		start--
 	}
 
-	for m.pos > 0 {
-		if !unicode.IsSpace(m.value[m.pos]) {
-			m.SetCursor(m.pos - 1)
-		} else {
-			if m.pos > 0 {
-				// keep the previous space
-				m.SetCursor(m.pos + 1)
-			}
-			break
-		}
-	}
-
-	if oldPos > len(m.value) {
-		m.value = m.value[:m.pos]
-	} else {
-		m.value = append(m.value[:m.pos], m.value[oldPos:]...)
-	}
+	m.value = append(m.value[:start], m.value[m.pos:]...)
 	m.Err = m.validate(m.value)
+	m.SetCursor(start)
 }
 
 // deleteWordForward deletes the word right to the cursor. If input is masked
